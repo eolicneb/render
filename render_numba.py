@@ -200,7 +200,7 @@ class ComposeDE():
 
 if __name__ == "__main__":
 
-    moovie = True
+    moovie = False
 
     import matplotlib.pyplot as plt    
     from matplotlib.animation import FuncAnimation
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     light = np.array((1.,1.,1.))
     eye = np.array((.2,.0,.0))
 
-    shape = (200, 180)
+    shape = (800, 700)
 
     # light needs to be normalized
     light_len = np.linalg.norm(light)
