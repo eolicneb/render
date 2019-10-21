@@ -7,6 +7,8 @@ dif = 1e-6
 DIST_LIMIT = 1e-3
 COUNT_LIMIT = 100
 MAX_DIST = 30
+MAX_REFLEX = 6
+REFLEXIVITY = .4
 
 deltas = np.eye(3)
 
@@ -23,6 +25,11 @@ def normal(p: np.ndarray, DE, de: np.double, dif: np.double=1e-6) -> np.ndarray:
     leng = np.linalg.norm(n)
     n = n/leng
     return n
+
+@jit(nopython=True)
+def reflected(d, n):
+    d_n = -2*(d*n).sum()*n
+    return d + d_n
     
 @jit(nopython=True)
 def shadow(p, normal, light, DE, light_spread=0.001) -> float:
@@ -60,7 +67,7 @@ def shadow(p, normal, light, DE, light_spread=0.001) -> float:
     return min(1., (min_de/light_spread))
 
 @jit(nopython=True)
-def march(origin, direction, DE, light: np.ndarray) -> np.ndarray:
+def march(origin, direction, DE, light: np.ndarray, reflex: int=0) -> np.ndarray:
     """
     :params: origin
     :params: direction
@@ -94,7 +101,15 @@ def march(origin, direction, DE, light: np.ndarray) -> np.ndarray:
     # shadow by eclipsing
     shadowed = shadow(p, n, light, DE, light_spread=.1)
 
-    return m*(.5+.5*(s+shadowed))
+    selfcolor = m*(.5+.5*(s+shadowed))
+    if reflex < MAX_REFLEX:
+        q = p + n*DIST_LIMIT
+        v = reflected(direction, n)
+        selfcolor = selfcolor + march(q, v, DE, light, reflex+1)*REFLEXIVITY
+    lastcolor = np.zeros((3,))
+    for i in range(3):
+        lastcolor[i] = min(selfcolor[i], 1.)
+    return lastcolor
 
 def smooth(image):
     new_image = image[:-1,:-1,:] + image[:-1,1:,:] + image[1:,:-1,:] + image[1:,1:,:]
@@ -200,7 +215,7 @@ class ComposeDE():
 
 if __name__ == "__main__":
 
-    moovie = False
+    counter = 0
 
     import matplotlib.pyplot as plt    
     from matplotlib.animation import FuncAnimation
@@ -263,6 +278,8 @@ if __name__ == "__main__":
 
     def new_image(fase):
         # fase = -.2
+        p = time.perf_counter()
+        global counter
 
         @jit(nopython=True)
         def comp_DE(p):
@@ -281,31 +298,44 @@ if __name__ == "__main__":
         imageR = render2(**kws)
 
         image = np.concatenate([imageL,imageR], axis=1)
+
+        elapsed = time.perf_counter() - p
+        print(f"{__file__}-{counter}: executed in {elapsed:0.6f} seconds.")
+        counter += 1
         return image
 
 
     fig = plt.figure()
     ax = fig.add_axes([0, 0, 1, 1])
     im = ax.imshow(np.zeros((shape[0],shape[1]*2)))
+    
 
-    if moovie:
+    MOVIE = False
+    SAVE = True
+
+    if MOVIE:
         # f = time.perf_counter()
         # elapsed = f - s
         # print(f"{__file__} executed in {elapsed:0.6f} seconds.")
-
         def update(i):
             im.set_data(new_image(i))
             return im,
 
-        file = 'images/'+str(time.time())+'.gif'
-        # p = time.perf_counter()
         fnAn = FuncAnimation(fig, update, frames=np.linspace(np.pi/6,2*np.pi,12), interval=.02, blit=True, repeat=True)
-        fnAn.save(file, dpi=80, writer='imagemagick')
-        # elapsed = int(time.perf_counter() - p)
+        output_file = 'images/'+str(int(time.time()))+'.gif'
+        fnAn.save(output_file, dpi=80, writer='imagemagick')
         # rename(file, f'numbatest_eta{elapsed:d}s.gif')
 
     else:
+        fase = time.time()
+        image = new_image(fase)
 
-        plt.imshow(new_image(.6))
+        if SAVE:
+            from PIL import Image
+            im = Image.fromarray((255*image).astype('uint8'))
+            output_file = f"images/{int(fase)}.png"
+            im.save(output_file)
 
-        plt.show()
+        else:
+            plt.imshow(image)
+            plt.show()
