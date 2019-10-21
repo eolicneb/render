@@ -310,22 +310,19 @@ if __name__ == "__main__":
     im = ax.imshow(np.zeros((shape[0],shape[1]*2)))
     
 
-    MOVIE = False
+    MOVIE = True
     SAVE = True
 
     if MOVIE:
-        # f = time.perf_counter()
-        # elapsed = f - s
-        # print(f"{__file__} executed in {elapsed:0.6f} seconds.")
+        
         def update(i):
             im.set_data(new_image(i))
             return im,
 
-        fnAn = FuncAnimation(fig, update, frames=np.linspace(np.pi/6,2*np.pi,12), interval=.02, blit=True, repeat=True)
+        fnAn = FuncAnimation(fig, update, frames=np.linspace(np.pi/12,2*np.pi,24), interval=.02, blit=True, repeat=True)
         output_file = 'images/'+str(int(time.time()))+'.gif'
         fnAn.save(output_file, dpi=80, writer='imagemagick')
-        # rename(file, f'numbatest_eta{elapsed:d}s.gif')
-
+        
     else:
         fase = time.time()
         image = new_image(fase)
