@@ -7,7 +7,7 @@ dif = 1e-8
 DIST_LIMIT = 1e-6
 COUNT_LIMIT = 100
 MAX_DIST = 30
-MAX_REFLEX = 3
+MAX_REFLEX = 6
 REFLEXIVITY = .4
 
 class SphereDE():
@@ -151,6 +151,9 @@ def stereo(kwargsL, kwargsR):
     return render(**kwargsL), render(**kwargsR)
 
 if __name__ == "__main__":
+
+    SAVE = True
+
     import time
     s = time.perf_counter()
 
@@ -164,7 +167,7 @@ if __name__ == "__main__":
     light = np.array((1.,1.,1.))
     eye = np.array((-.1,.2,.0))
 
-    shape = (800, 700)
+    shape = (1080, 960)
     diagonal = 3.
 
     stereo_kws = (dict(screen=Screen(origin=origin+eye,
@@ -186,8 +189,14 @@ if __name__ == "__main__":
 
     elapsed = time.perf_counter() - s
     print(f"{__file__} executed in {elapsed:0.6f} seconds.")
-    # print(f'image size {image.shape}')
-    import matplotlib.pyplot as plt
-    plt.imshow(np.concatenate([imageL,imageR], axis=1))
-    # plt.imshow(image)
-    plt.show()
+    image = np.concatenate([imageL,imageR], axis=1)
+
+    if SAVE:
+        from PIL import Image
+        im = Image.fromarray((255*image).astype('uint8'))
+        output_file = f"images/{time.time()}.png"
+        im.save(output_file)
+    else:
+        import matplotlib.pyplot as plt
+        plt.imshow(image, axis=1)
+        plt.show()
